@@ -16,7 +16,6 @@ public class WebConfig implements WebMvcConfigurer {
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
         // 【已修改】: 暂时注释掉拦截器的注册逻辑，以禁用 JWT 认证和拦截功能
-        /*
         registry.addInterceptor(loginInterceptor).excludePathPatterns(
 
                 "/account/login",
@@ -29,6 +28,5 @@ public class WebConfig implements WebMvcConfigurer {
                 "/item/**",
                 "/orders/**"
         );
-        */
     }
 }
