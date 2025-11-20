@@ -22,9 +22,9 @@ public class WebConfig implements WebMvcConfigurer {
                 "/account/register",
                 "/oauth/render",
                 "/oauth/callback",
+
                 "/category/**",
                 "/product/**",
-
                 "/item/**",
                 "/orders/**"
         );
