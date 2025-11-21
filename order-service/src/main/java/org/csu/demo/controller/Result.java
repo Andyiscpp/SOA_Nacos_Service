@@ -1,12 +1,14 @@
 package org.csu.demo.controller;
 
 import lombok.Data;
+import lombok.NoArgsConstructor; // 1. 导入注解
 
 /**
  * 统一响应结果封装类
  * 用于Controller层返回标准化响应数据
  */
 @Data
+@NoArgsConstructor // 2. 添加此注解，生成无参构造函数
 public class Result {
     private Object data;   // 响应数据（成功时返回的业务数据）
     private String msg;    // 响应消息（成功/失败描述）

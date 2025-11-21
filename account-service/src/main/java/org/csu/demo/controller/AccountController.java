@@ -5,12 +5,14 @@ import org.csu.demo.dao.SignonDao;
 import org.csu.demo.domain.Account;
 import org.csu.demo.domain.AccountInfoVO;
 import org.csu.demo.domain.Signon;
+import org.csu.demo.feign.OrderFeignClient;
 import org.csu.demo.service.IAccountService;
 import org.csu.demo.service.ISignonService;
 import org.csu.demo.utils.JwtUtil;
 import org.csu.demo.utils.ThreadLocalUtil;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,6 +41,11 @@ public class AccountController {
     @Autowired
     private AccountDao accountDao;
 
+    // 1. 注入 OrderFeignClient
+    @Qualifier("org.csu.demo.feign.OrderFeignClient")
+    @Autowired
+    private OrderFeignClient orderFeignClient;
+    
     //0.0注册
     @PostMapping("/register")
     public Result register(String username, String password) {
@@ -126,10 +133,43 @@ public class AccountController {
     }
 
     //3.删除账户
+//    @DeleteMapping("/{userid}")
+//    public Result deleteAccount(@PathVariable String userid) {
+//        boolean flag=accountService.deleteAccount(userid);
+//        return new Result(flag ? Code.DELETE_OK:Code.DELETE_ERR,flag);
+//    }
+
+    // 2. 修改删除逻辑
     @DeleteMapping("/{userid}")
-    public Result deleteAccount(@PathVariable String userid) {
-        boolean flag=accountService.deleteAccount(userid);
-        return new Result(flag ? Code.DELETE_OK:Code.DELETE_ERR,flag);
+    public boolean deleteAccount(@PathVariable String userid) {
+        System.out.println("正在尝试删除用户: " + userid + "，准备检查关联订单...");
+
+        // --- 新增逻辑：调用 Order 服务检查订单 ---
+        try {
+            Result orderResult = orderFeignClient.getOrdersByUserid(userid);
+
+            // 检查调用是否成功
+            if (Code.GET_OK.equals(orderResult.getCode())) {
+                // 获取数据部分
+                Object data = orderResult.getData();
+                // 简单判断：如果 data 是 List 且不为空，说明有订单
+                if (data instanceof List && !((List<?>) data).isEmpty()) {
+                    System.out.println("删除失败：该用户存在关联订单");
+                    // 这里我们选择返回 false 表示删除失败（或者你可以选择抛出自定义异常）
+                    return false;
+                }
+            }
+        } catch (Exception e) {
+            // 如果订单服务挂了，是否允许删除？通常为了安全起见，如果不确定有没有订单，最好不要删
+            System.err.println("订单服务调用异常，为数据安全停止删除: " + e.getMessage());
+            return false;
+        }
+        // -------------------------------------
+
+        // 如果没有订单，继续执行原来的删除逻辑
+        int flag = accountDao.deleteById(userid);
+        int flag2 = signonDao.deleteById(userid);
+        return flag == 1 && flag2 == 1;
     }
 
     //4.重置密码
